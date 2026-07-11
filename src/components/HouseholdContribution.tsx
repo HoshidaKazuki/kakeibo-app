@@ -27,8 +27,8 @@ export default function HouseholdContribution({
   );
 
   return (
-    <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm shadow-stone-200/60 dark:border-stone-800 dark:bg-stone-900 dark:shadow-none">
-      <h2 className="mb-2 text-xs font-semibold text-stone-500 dark:text-stone-400">
+    <section className="paper-card animate-rise p-4">
+      <h2 className="mb-2 text-xs font-semibold text-ink-soft">
         {label}
       </h2>
       <div
@@ -40,7 +40,7 @@ export default function HouseholdContribution({
             <p className={`text-xs font-semibold ${memberAccent(i).text}`}>
               {member.name}
             </p>
-            <p className="mt-1 text-base font-bold text-stone-900 dark:text-stone-50">
+            <p className="mt-1 text-base font-bold text-foreground">
               {formatYen(totals[i])}
             </p>
           </div>

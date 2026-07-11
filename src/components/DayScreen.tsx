@@ -30,20 +30,20 @@ export default function DayScreen({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-3">
+      <div className="animate-rise flex items-center gap-3 px-1">
         <button
           type="button"
           onClick={onBack}
-          className="rounded-full px-3 py-1.5 text-sm font-medium text-stone-500 transition-colors hover:bg-accent-soft hover:text-accent dark:text-stone-400 dark:hover:bg-stone-800"
+          className="rounded-full border border-border/70 bg-white/70 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-accent-soft hover:text-accent"
         >
           ‹ カレンダーへ
         </button>
-        <h1 className="text-lg font-bold text-stone-900 dark:text-stone-50">
+        <h1 className="headline-font text-lg font-bold text-foreground sm:text-xl">
           {year}年{Number(month)}月{Number(day)}日
         </h1>
       </div>
 
-      <SummaryBar label="この日の収支" income={income} expense={expense} />
+      <SummaryBar label="この日の貯金" income={income} expense={expense} />
 
       <TransactionForm members={members} onAdd={onAdd} fixedDate={date} />
       <TransactionList transactions={transactions} members={members} onDelete={onDelete} />

@@ -11,6 +11,9 @@ export const DEFAULT_MEMBERS: Member[] = [
   { id: "member-2", name: "パートナー" },
 ];
 
+export const JOINT_MEMBER_ID = "joint";
+export const JOINT_MEMBER_LABEL = "共同";
+
 export type Transaction = {
   id: string;
   type: TransactionType;
@@ -19,17 +22,15 @@ export type Transaction = {
   date: string; // YYYY-MM-DD
   memo?: string;
   memberId: string;
+  isMonthlyFixed?: boolean;
+  sourceTransactionId?: string;
 };
 
 export const EXPENSE_CATEGORIES = [
   "食費",
+  "外食費",
   "日用品",
-  "交通費",
-  "住居費",
-  "光熱費",
-  "通信費",
   "娯楽",
-  "医療費",
   "その他",
 ] as const;
 
