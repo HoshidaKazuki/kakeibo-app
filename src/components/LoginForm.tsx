@@ -1,66 +1,51 @@
-"use client";
+type Props = {
+  error?: string;
+};
 
-import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+const ERROR_TEXT: Record<string, string> = {
+  invalid: "IDまたはパスワードが違います。",
+  not_configured: "サーバー側のID/パスワード設定が未完了です。",
+};
 
-export default function LoginForm() {
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setIsLoading(true);
-    setMessage("");
-
-    const supabase = createClient();
-    const redirectTo = `${window.location.origin}/auth/callback?next=/app`;
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: redirectTo },
-    });
-
-    if (error) {
-      const detail = error.message ? ` (${error.message})` : "";
-      setMessage(`ログインリンクの送信に失敗しました${detail}`);
-    } else {
-      setMessage("ログインリンクを送信しました。メールを確認してください。");
-    }
-
-    setIsLoading(false);
-  }
+export default function LoginForm({ error }: Props) {
+  const message = error ? ERROR_TEXT[error] ?? "ログインに失敗しました。" : "";
 
   return (
-    <form onSubmit={handleSubmit} className="paper-card animate-rise w-full max-w-md p-5">
+    <form action="/auth/login" method="post" className="paper-card animate-rise w-full max-w-md p-5">
       <h1 className="headline-font text-lg font-bold text-foreground">本番ログイン</h1>
       <p className="mt-1 text-xs text-ink-soft">
-        メールアドレスにログインリンクを送信します。
+        管理IDとパスワードでログインします。
       </p>
 
       <label className="mt-4 flex flex-col gap-1 text-sm text-ink-soft">
-        メールアドレス
+        ログインID
         <input
-          type="email"
+          type="text"
+          name="loginId"
           required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@example.com"
+          placeholder="admin"
+          className="rounded-xl border border-border bg-white/70 px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-accent/40"
+        />
+      </label>
+
+      <label className="mt-3 flex flex-col gap-1 text-sm text-ink-soft">
+        パスワード
+        <input
+          type="password"
+          name="password"
+          required
           className="rounded-xl border border-border bg-white/70 px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-accent/40"
         />
       </label>
 
       <button
         type="submit"
-        disabled={isLoading}
-        className="headline-font mt-4 w-full rounded-full bg-accent py-2.5 text-sm font-bold text-accent-foreground transition-opacity disabled:opacity-60"
+        className="headline-font mt-4 w-full rounded-full bg-accent py-2.5 text-sm font-bold text-accent-foreground transition-opacity"
       >
-        {isLoading ? "送信中..." : "ログインリンクを送る"}
+        ログイン
       </button>
 
       {message ? <p className="mt-3 text-xs text-ink-soft">{message}</p> : null}
-      <p className="mt-2 text-[11px] text-ink-soft">
-        失敗する場合は、SupabaseのEmail Provider有効化とRedirect URL設定を確認してください。
-      </p>
     </form>
   );
 }

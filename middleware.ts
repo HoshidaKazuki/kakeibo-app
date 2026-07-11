@@ -1,10 +1,27 @@
 import type { NextRequest } from "next/server";
-import { updateSession } from "@/lib/supabase/middleware";
+import { NextResponse } from "next/server";
+
+const AUTH_COOKIE = "kakeibo_auth";
 
 export async function middleware(request: NextRequest) {
-  return updateSession(request);
+  const isAuthenticated = request.cookies.get(AUTH_COOKIE)?.value === "1";
+  const { pathname } = request.nextUrl;
+
+  if (pathname.startsWith("/app") && !isAuthenticated) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+
+  if (pathname === "/login" && isAuthenticated) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/app";
+    return NextResponse.redirect(url);
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/app/:path*", "/login", "/auth/callback"],
+  matcher: ["/app/:path*", "/login"],
 };

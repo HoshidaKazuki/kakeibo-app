@@ -1,20 +1,15 @@
-import { redirect } from "next/navigation";
 import LoginForm from "@/components/LoginForm";
-import { createClient } from "@/lib/supabase/server";
 
-export default async function LoginPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+type Props = {
+  searchParams?: Promise<{ error?: string }>;
+};
 
-  if (user) {
-    redirect("/app");
-  }
+export default async function LoginPage({ searchParams }: Props) {
+  const params = searchParams ? await searchParams : undefined;
 
   return (
     <div className="flex min-h-full flex-1 items-center justify-center bg-background px-4 py-8">
-      <LoginForm />
+      <LoginForm error={params?.error} />
     </div>
   );
 }
