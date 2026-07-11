@@ -21,7 +21,8 @@ export default function LoginForm() {
     });
 
     if (error) {
-      setMessage("ログインリンクの送信に失敗しました。時間をおいて再試行してください。");
+      const detail = error.message ? ` (${error.message})` : "";
+      setMessage(`ログインリンクの送信に失敗しました${detail}`);
     } else {
       setMessage("ログインリンクを送信しました。メールを確認してください。");
     }
@@ -57,6 +58,9 @@ export default function LoginForm() {
       </button>
 
       {message ? <p className="mt-3 text-xs text-ink-soft">{message}</p> : null}
+      <p className="mt-2 text-[11px] text-ink-soft">
+        失敗する場合は、SupabaseのEmail Provider有効化とRedirect URL設定を確認してください。
+      </p>
     </form>
   );
 }
