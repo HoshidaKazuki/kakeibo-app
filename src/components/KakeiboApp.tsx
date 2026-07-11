@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { DEFAULT_MEMBERS, type Member, type Transaction } from "@/types";
 import { todayString } from "@/lib/format";
 import CalendarView from "@/components/CalendarView";
@@ -15,6 +15,7 @@ type PersistedState = {
 
 type Props = {
   persistKey?: string;
+  syncEndpoint?: string;
 };
 
 function readPersistedState(persistKey?: string): PersistedState | null {
@@ -55,26 +56,99 @@ function expandTransactionsForMonth(
   return [...explicit, ...projected];
 }
 
-export default function KakeiboApp({ persistKey }: Props) {
+export default function KakeiboApp({ persistKey, syncEndpoint }: Props) {
+  const syncEnabled = Boolean(syncEndpoint);
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    const persisted = readPersistedState(persistKey);
+    const persisted = syncEnabled ? null : readPersistedState(persistKey);
     return Array.isArray(persisted?.transactions) ? persisted.transactions : [];
   });
   const [members, setMembers] = useState(() => {
-    const persisted = readPersistedState(persistKey);
+    const persisted = syncEnabled ? null : readPersistedState(persistKey);
     return Array.isArray(persisted?.members) && persisted.members.length > 0
       ? persisted.members
       : DEFAULT_MEMBERS;
   });
   const [yearMonth, setYearMonth] = useState(() => {
-    const persisted = readPersistedState(persistKey);
+    const persisted = syncEnabled ? null : readPersistedState(persistKey);
     return typeof persisted?.yearMonth === "string" && /^\d{4}-\d{2}$/.test(persisted.yearMonth)
       ? persisted.yearMonth
       : todayString().slice(0, 7);
   });
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [isHydratingShared, setIsHydratingShared] = useState(syncEnabled);
+  const [sharedError, setSharedError] = useState<string | null>(null);
+
+  const sendClientLog = useCallback(async (args: {
+    eventType: string;
+    level: "info" | "warn" | "error";
+    message: string;
+    meta?: Record<string, unknown>;
+  }) => {
+    if (!syncEnabled) return;
+    try {
+      await fetch("/api/logs", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(args),
+      });
+    } catch {
+      // Ignore logging transport failures.
+    }
+  }, [syncEnabled]);
 
   useEffect(() => {
+    if (!syncEnabled || !syncEndpoint) return;
+
+    let alive = true;
+    const hydrate = async () => {
+      try {
+        const response = await fetch(syncEndpoint, { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error(`state_load_http_${response.status}`);
+        }
+
+        const payload = (await response.json()) as PersistedState;
+        if (!alive) return;
+
+        setTransactions(Array.isArray(payload.transactions) ? payload.transactions : []);
+        setMembers(
+          Array.isArray(payload.members) && payload.members.length > 0
+            ? payload.members
+            : DEFAULT_MEMBERS,
+        );
+        setYearMonth(
+          typeof payload.yearMonth === "string" && /^\d{4}-\d{2}$/.test(payload.yearMonth)
+            ? payload.yearMonth
+            : todayString().slice(0, 7),
+        );
+        setSharedError(null);
+      } catch (error) {
+        if (!alive) return;
+        const message = error instanceof Error ? error.message : "state_load_failed";
+        setSharedError("共有データの読み込みに失敗しました");
+        await sendClientLog({
+          eventType: "shared_state_load_failed",
+          level: "error",
+          message,
+        });
+      } finally {
+        if (alive) {
+          setIsHydratingShared(false);
+        }
+      }
+    };
+
+    void hydrate();
+
+    return () => {
+      alive = false;
+    };
+  }, [syncEnabled, syncEndpoint, sendClientLog]);
+
+  useEffect(() => {
+    if (syncEnabled) return;
     if (!persistKey || typeof window === "undefined") return;
 
     const payload: PersistedState = {
@@ -83,7 +157,49 @@ export default function KakeiboApp({ persistKey }: Props) {
       yearMonth,
     };
     window.localStorage.setItem(persistKey, JSON.stringify(payload));
-  }, [persistKey, transactions, members, yearMonth]);
+  }, [syncEnabled, persistKey, transactions, members, yearMonth]);
+
+  useEffect(() => {
+    if (!syncEnabled || !syncEndpoint || isHydratingShared) return;
+
+    const timer = window.setTimeout(() => {
+      const payload: PersistedState = {
+        transactions,
+        members,
+        yearMonth,
+      };
+
+      void fetch(syncEndpoint, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      }).then(async (response) => {
+        if (!response.ok) {
+          await sendClientLog({
+            eventType: "shared_state_save_failed",
+            level: "error",
+            message: `state_save_http_${response.status}`,
+          });
+          setSharedError("共有データの保存に失敗しました");
+        } else {
+          setSharedError(null);
+        }
+      }).catch(async (error) => {
+        await sendClientLog({
+          eventType: "shared_state_save_exception",
+          level: "error",
+          message: error instanceof Error ? error.message : "state_save_exception",
+        });
+        setSharedError("共有データの保存に失敗しました");
+      });
+    }, 500);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [syncEnabled, syncEndpoint, isHydratingShared, transactions, members, yearMonth, sendClientLog]);
 
   function handleAdd(transaction: Omit<Transaction, "id">) {
     setTransactions((prev) => [
@@ -164,6 +280,15 @@ export default function KakeiboApp({ persistKey }: Props) {
           よく使ってるカテゴリ: <span className="font-semibold text-foreground">{mostUsedCategory}</span>
         </p>
       </section>
+
+      {syncEnabled && sharedError ? (
+        <section className="paper-card animate-rise px-4 py-3">
+          <p className="text-xs font-semibold text-rose-600">{sharedError}</p>
+          <p className="mt-1 text-[11px] text-ink-soft">
+            再読み込みしても改善しない場合は管理者に連絡してください。
+          </p>
+        </section>
+      ) : null}
 
       {selectedDate ? (
         <DayScreen

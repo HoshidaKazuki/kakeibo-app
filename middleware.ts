@@ -19,7 +19,19 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+
+  if (isAuthenticated && pathname.startsWith("/app")) {
+    response.cookies.set(AUTH_COOKIE, "1", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 180,
+    });
+  }
+
+  return response;
 }
 
 export const config = {
