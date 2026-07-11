@@ -17,6 +17,19 @@ type Props = {
   persistKey?: string;
 };
 
+function readPersistedState(persistKey?: string): PersistedState | null {
+  if (!persistKey || typeof window === "undefined") return null;
+
+  const raw = window.localStorage.getItem(persistKey);
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw) as PersistedState;
+  } catch {
+    return null;
+  }
+}
+
 function clampDateToMonth(baseDate: string, yearMonth: string): string {
   const day = Number(baseDate.slice(8, 10));
   const [year, month] = yearMonth.split("-").map(Number);
@@ -43,32 +56,23 @@ function expandTransactionsForMonth(
 }
 
 export default function KakeiboApp({ persistKey }: Props) {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [members, setMembers] = useState(DEFAULT_MEMBERS);
-  const [yearMonth, setYearMonth] = useState(todayString().slice(0, 7));
+  const [transactions, setTransactions] = useState<Transaction[]>(() => {
+    const persisted = readPersistedState(persistKey);
+    return Array.isArray(persisted?.transactions) ? persisted.transactions : [];
+  });
+  const [members, setMembers] = useState(() => {
+    const persisted = readPersistedState(persistKey);
+    return Array.isArray(persisted?.members) && persisted.members.length > 0
+      ? persisted.members
+      : DEFAULT_MEMBERS;
+  });
+  const [yearMonth, setYearMonth] = useState(() => {
+    const persisted = readPersistedState(persistKey);
+    return typeof persisted?.yearMonth === "string" && /^\d{4}-\d{2}$/.test(persisted.yearMonth)
+      ? persisted.yearMonth
+      : todayString().slice(0, 7);
+  });
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!persistKey || typeof window === "undefined") return;
-
-    const raw = window.localStorage.getItem(persistKey);
-    if (!raw) return;
-
-    try {
-      const parsed = JSON.parse(raw) as PersistedState;
-      if (Array.isArray(parsed.transactions)) {
-        setTransactions(parsed.transactions);
-      }
-      if (Array.isArray(parsed.members) && parsed.members.length > 0) {
-        setMembers(parsed.members);
-      }
-      if (typeof parsed.yearMonth === "string" && /^\d{4}-\d{2}$/.test(parsed.yearMonth)) {
-        setYearMonth(parsed.yearMonth);
-      }
-    } catch {
-      // Ignore invalid persisted payload and continue with defaults.
-    }
-  }, [persistKey]);
 
   useEffect(() => {
     if (!persistKey || typeof window === "undefined") return;
