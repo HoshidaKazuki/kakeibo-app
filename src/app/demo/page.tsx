@@ -1,0 +1,9 @@
+import KakeiboApp from "@/components/KakeiboApp";
+
+export default function DemoPage() {
+  return (
+    <div className="relative flex min-h-full flex-1 flex-col bg-background font-sans">
+      <KakeiboApp />
+    </div>
+  );
+}
