@@ -32,6 +32,7 @@ body {
     linear-gradient(165deg, #f8efe2 0%, #f2e6d5 100%);
   color: var(--foreground);
   font-family: var(--font-rounded), sans-serif;
+  min-height: 100dvh;
 }
 
 body::before {
@@ -86,4 +87,18 @@ body::before {
 
 .animate-rise {
   animation: rise 320ms ease-out both;
+}
+
+@media (display-mode: standalone) {
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    background: linear-gradient(165deg, #f8efe2 0%, #f2e6d5 100%);
+  }
+
+  body::before {
+    opacity: 0.12;
+  }
 }

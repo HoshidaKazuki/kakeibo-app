@@ -17,6 +17,26 @@ const headline = Zen_Maru_Gothic({
 export const metadata: Metadata = {
   title: "かけぼっちゃん",
   description: "かんたん家計簿アプリ「かけぼっちゃん」",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "かけぼっちゃん",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  icons: {
+    icon: [
+      { url: "/icon?size=192", sizes: "192x192", type: "image/png" },
+      { url: "/icon?size=512", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-icon", sizes: "180x180", type: "image/png" }],
+  },
+};
+
+export const viewport = {
+  themeColor: "#f5ede0",
 };
 
 export default function RootLayout({
