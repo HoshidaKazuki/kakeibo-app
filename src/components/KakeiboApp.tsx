@@ -1,11 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import { DEFAULT_MEMBERS, type Transaction } from "@/types";
+import { useEffect, useState } from "react";
+import { DEFAULT_MEMBERS, type Member, type Transaction } from "@/types";
 import { todayString } from "@/lib/format";
 import CalendarView from "@/components/CalendarView";
 import DayScreen from "@/components/DayScreen";
 import MemberNameEditor from "@/components/MemberNameEditor";
+
+type PersistedState = {
+  transactions: Transaction[];
+  members: Member[];
+  yearMonth: string;
+};
+
+type Props = {
+  persistKey?: string;
+};
 
 function clampDateToMonth(baseDate: string, yearMonth: string): string {
   const day = Number(baseDate.slice(8, 10));
@@ -32,11 +42,44 @@ function expandTransactionsForMonth(
   return [...explicit, ...projected];
 }
 
-export default function KakeiboApp() {
+export default function KakeiboApp({ persistKey }: Props) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [members, setMembers] = useState(DEFAULT_MEMBERS);
   const [yearMonth, setYearMonth] = useState(todayString().slice(0, 7));
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!persistKey || typeof window === "undefined") return;
+
+    const raw = window.localStorage.getItem(persistKey);
+    if (!raw) return;
+
+    try {
+      const parsed = JSON.parse(raw) as PersistedState;
+      if (Array.isArray(parsed.transactions)) {
+        setTransactions(parsed.transactions);
+      }
+      if (Array.isArray(parsed.members) && parsed.members.length > 0) {
+        setMembers(parsed.members);
+      }
+      if (typeof parsed.yearMonth === "string" && /^\d{4}-\d{2}$/.test(parsed.yearMonth)) {
+        setYearMonth(parsed.yearMonth);
+      }
+    } catch {
+      // Ignore invalid persisted payload and continue with defaults.
+    }
+  }, [persistKey]);
+
+  useEffect(() => {
+    if (!persistKey || typeof window === "undefined") return;
+
+    const payload: PersistedState = {
+      transactions,
+      members,
+      yearMonth,
+    };
+    window.localStorage.setItem(persistKey, JSON.stringify(payload));
+  }, [persistKey, transactions, members, yearMonth]);
 
   function handleAdd(transaction: Omit<Transaction, "id">) {
     setTransactions((prev) => [

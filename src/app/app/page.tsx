@@ -7,7 +7,7 @@ export default function AppPage() {
       <div className="mx-auto mt-4 flex w-full max-w-lg justify-end px-4">
         <SignOutButton />
       </div>
-      <KakeiboApp />
+      <KakeiboApp persistKey="kakeibo-app-prod-state" />
     </div>
   );
 }
